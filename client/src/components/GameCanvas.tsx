@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const SKY = "/manus-storage/flappy-dragon-sky_a3f55edd.png";
-const DRAGON = "/manus-storage/flappy-dragon-clean_c2830cc0.png";
+const DRAGON = "/manus-storage/flappy-dragon-new-clean_b9390ffc.png";
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };

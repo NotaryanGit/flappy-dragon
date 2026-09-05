@@ -1,5 +1,5 @@
-# Bug-fix tasks
+# Dragon swap tasks
 
-- [x] Remove the runtime getImageData call on the remote dragon image.
-- [x] Create and upload a same-origin-safe transparent dragon sprite asset.
-- [x] Verify the SecurityError is gone and save a corrected checkpoint.
+- [x] Prepare the newly uploaded white flying dragon as a transparent game sprite.
+- [x] Update the game to use the new dragon sprite without changing controls or audio.
+- [x] Verify the revised preview and save a checkpoint.
