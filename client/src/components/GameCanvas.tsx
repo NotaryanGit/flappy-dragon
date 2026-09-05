@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const SKY = "/manus-storage/flappy-dragon-sky_a3f55edd.png";
-const DRAGON = "/manus-storage/flappy-dragon-sprite_f4c69596.png";
+const DRAGON = "/manus-storage/pasted_file_YUSfdr_image_f216097c.png";
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
@@ -30,6 +30,24 @@ const initialState = (best = 0, demo = false): GameState => ({
 function readScores(): ScoreRow[] {
   try { return JSON.parse(localStorage.getItem("flappy-dragon-scores") || "[]"); } catch { return []; }
 }
+let audioContext: AudioContext | null = null;
+function playSfx(kind: "jump" | "score" | "crash") {
+  if (typeof window === "undefined") return;
+  const AudioCtor = (window as any).AudioContext || (window as any).webkitAudioContext;
+  if (!AudioCtor) return;
+  audioContext ||= new AudioCtor();
+  const ctx = audioContext as AudioContext;
+  if (ctx.state === "suspended") void ctx.resume();
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  const settings = kind === "jump" ? { start: 320, end: 570, duration: 0.11, wave: "sine" as OscillatorType } : kind === "score" ? { start: 620, end: 980, duration: 0.18, wave: "triangle" as OscillatorType } : { start: 190, end: 72, duration: 0.34, wave: "sawtooth" as OscillatorType };
+  osc.type = settings.wave; osc.frequency.setValueAtTime(settings.start, now); osc.frequency.exponentialRampToValueAtTime(settings.end, now + settings.duration);
+  gain.gain.setValueAtTime(0.0001, now); gain.gain.exponentialRampToValueAtTime(kind === "crash" ? 0.16 : 0.11, now + 0.012); gain.gain.exponentialRampToValueAtTime(0.0001, now + settings.duration);
+  osc.start(now); osc.stop(now + settings.duration + 0.02);
+}
+
 function saveScore(name: string, score: number) {
   const clean = name.replace(/[^a-z0-9 _-]/gi, "").trim().slice(0, 12) || "SKY PILOT";
   const next = [...readScores(), { name: clean, score, date: new Date().toISOString() }]
@@ -72,8 +90,8 @@ export default function GameCanvas() {
     load(DRAGON, dragonImg); load(SKY, skyImg); if (state.demo) { state.mode = "playing"; state.dragon.x = canvas.clientWidth * 0.28; state.dragon.y = canvas.clientHeight * 0.47; setMode("playing"); }
 
     const flap = () => {
-      if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.vy = -440; setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
-      state.dragon.vy = -440; state.dragon.flap = 1;
+      if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.vy = -440; playSfx("jump"); setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
+      state.dragon.vy = -440; state.dragon.flap = 1; playSfx("jump");
     };
     const key = (e: KeyboardEvent) => { if (["Space", "ArrowUp"].includes(e.code)) { e.preventDefault(); flap(); } };
     const pointer = () => flap();
@@ -91,7 +109,7 @@ export default function GameCanvas() {
         const ground = h - 62, dragonR = 21;
         for (const p of state.pipes) {
           const gap = Math.max(145, 188 - state.score * 1.5), top = p.gapY - gap / 2, bottom = p.gapY + gap / 2;
-          if (!p.passed && p.x + 76 < state.dragon.x) { p.passed = true; state.score += 1; setScore(state.score); }
+          if (!p.passed && p.x + 76 < state.dragon.x) { p.passed = true; state.score += 1; setScore(state.score); playSfx("score"); }
           const hitX = state.dragon.x + dragonR > p.x && state.dragon.x - dragonR < p.x + 76;
           if (hitX && (state.dragon.y - dragonR < top || state.dragon.y + dragonR > bottom)) endGame();
         }
@@ -101,7 +119,7 @@ export default function GameCanvas() {
       drawScene(ctx, w, h, state, skyImg.current, dragonImg.current);
       raf.current = requestAnimationFrame(draw);
     };
-    const endGame = () => { if (state.mode !== "playing") return; state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); localStorage.setItem("flappy-dragon-best", String(state.score)); } };
+    const endGame = () => { if (state.mode !== "playing") return; playSfx("crash"); state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); localStorage.setItem("flappy-dragon-best", String(state.score)); } };
     (window as any).__flappyEnd = endGame;
     raf.current = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(raf.current!); window.removeEventListener("resize", resize); window.removeEventListener("keydown", key); canvas.removeEventListener("pointerdown", pointer); };
@@ -130,7 +148,17 @@ function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: G
   ctx.fillStyle = "#7d637d"; ctx.globalAlpha = .48; ctx.beginPath(); ctx.moveTo(0, h - 112); for (let x = 0; x <= w + 100; x += 90) ctx.lineTo(x, h - 112 - Math.sin(x * .018) * 30 - ((x / 90) % 2) * 24); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill(); ctx.globalAlpha = 1;
   for (const p of state.pipes) drawPipe(ctx, p.x, p.gapY, Math.max(145, 188 - state.score * 1.5), h);
   ctx.fillStyle = "#57445f"; ctx.fillRect(0, h - 62, w, 62); ctx.fillStyle = "#f2b26f"; for (let x = -48 - state.groundOffset; x < w + 48; x += 48) ctx.fillRect(x, h - 62, 30, 5); ctx.fillStyle = "#3f354e"; ctx.fillRect(0, h - 12, w, 12);
-  const d = state.dragon; ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); if (dragon?.complete && dragon.naturalWidth) { ctx.drawImage(dragon, -34, -34, 68, 68); } else { ctx.fillStyle = "#2d6f62"; ctx.beginPath(); ctx.ellipse(0, 0, 27, 21, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#e96f45"; ctx.beginPath(); ctx.moveTo(-9, -8); ctx.lineTo(-35, -28 - d.flap * 12); ctx.lineTo(-17, 3); ctx.fill(); ctx.fillStyle = "#f7e1bd"; ctx.beginPath(); ctx.arc(14, -8, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(16, -9, 2, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
+  const d = state.dragon; ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); const sprite = prepareDragonSprite(dragon); if (sprite) { ctx.drawImage(sprite, -42, -30, 84, 60); } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-31, -25 - d.flap * 10); ctx.lineTo(-17, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(11, -4); ctx.lineTo(32, -22 - d.flap * 8); ctx.lineTo(22, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e99a4e"; ctx.beginPath(); ctx.arc(14, -7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(15, -7, 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
+}
+function prepareDragonSprite(dragon: HTMLImageElement | undefined): HTMLCanvasElement | undefined {
+  if (!dragon || !dragon.complete || dragon.naturalWidth === 0) return undefined;
+  const cached = (dragon as HTMLImageElement & { __sprite?: HTMLCanvasElement }).__sprite;
+  if (cached) return cached;
+  const off = document.createElement("canvas"); off.width = dragon.naturalWidth; off.height = dragon.naturalHeight;
+  const ox = off.getContext("2d"); if (!ox) return undefined;
+  ox.drawImage(dragon, 0, 0); const pixels = ox.getImageData(0, 0, off.width, off.height);
+  for (let i = 0; i < pixels.data.length; i += 4) { const r = pixels.data[i], g = pixels.data[i + 1], b = pixels.data[i + 2]; if (r > 75 && r > g * 1.18 && r > b * 1.35 && g < 145) pixels.data[i + 3] = 0; }
+  ox.putImageData(pixels, 0, 0); (dragon as HTMLImageElement & { __sprite?: HTMLCanvasElement }).__sprite = off; return off;
 }
 function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) { ctx.save(); ctx.globalAlpha = .16; ctx.fillStyle = "#fff2cf"; ctx.beginPath(); ctx.arc(x, y, 28 * s, 0, Math.PI * 2); ctx.arc(x + 34 * s, y - 13 * s, 39 * s, 0, Math.PI * 2); ctx.arc(x + 77 * s, y, 24 * s, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 function drawPipe(ctx: CanvasRenderingContext2D, x: number, gapY: number, gap: number, h: number) { const top = gapY - gap / 2, bottom = gapY + gap / 2; ctx.fillStyle = "#5d7561"; ctx.fillRect(x, 0, 76, top); ctx.fillRect(x, bottom, 76, h - bottom - 62); ctx.fillStyle = "#89a266"; ctx.fillRect(x - 7, top - 18, 90, 18); ctx.fillRect(x - 7, bottom, 90, 18); ctx.fillStyle = "#3f5d54"; ctx.fillRect(x + 12, 0, 9, Math.max(0, top - 18)); ctx.fillRect(x + 12, bottom + 18, 9, h - bottom - 80); }
