@@ -6,6 +6,7 @@ const DRAGON = "/manus-storage/flappy-dragon-new-clean_b9390ffc.png";
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
+type Particle = { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; size: number; color: string; gravity: number };
 
 type GameState = {
   mode: Mode;
@@ -17,6 +18,7 @@ type GameState = {
   pipes: { x: number; gapY: number; passed: boolean }[];
   cloudOffset: number;
   groundOffset: number;
+  particles: Particle[];
   shake: number;
   demo: boolean;
 };
@@ -24,7 +26,7 @@ type GameState = {
 const initialState = (best = 0, demo = false): GameState => ({
   mode: "ready", score: 0, best, time: 0, last: 0,
   dragon: { x: 0, y: 0, vy: 0, rotation: 0, flap: 0 },
-  pipes: [], cloudOffset: 0, groundOffset: 0, shake: 0, demo,
+  pipes: [],   cloudOffset: 0, groundOffset: 0, particles: [], shake: 0, demo,
 });
 
 function readScores(): ScoreRow[] {
@@ -46,6 +48,14 @@ function playSfx(kind: "jump" | "score" | "crash") {
   osc.type = settings.wave; osc.frequency.setValueAtTime(settings.start, now); osc.frequency.exponentialRampToValueAtTime(settings.end, now + settings.duration);
   gain.gain.setValueAtTime(0.0001, now); gain.gain.exponentialRampToValueAtTime(kind === "crash" ? 0.16 : 0.11, now + 0.012); gain.gain.exponentialRampToValueAtTime(0.0001, now + settings.duration);
   osc.start(now); osc.stop(now + settings.duration + 0.02);
+}
+
+function burst(state: GameState, x: number, y: number, color: string, count: number) {
+  for (let i = 0; i < count; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 45 + Math.random() * 150;
+    state.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 25, life: 0.45 + Math.random() * 0.35, maxLife: 0.8, size: 2 + Math.random() * 4, color, gravity: 160 + Math.random() * 180 });
+  }
 }
 
 function saveScore(name: string, score: number) {
@@ -100,6 +110,7 @@ export default function GameCanvas() {
     const draw = (now: number) => {
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const dt = Math.min((now - (state.last || now)) / 1000, 0.033); state.last = now; state.time += dt;
+      state.particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.gravity * dt; p.life -= dt; }); state.particles = state.particles.filter(p => p.life > 0);
       if (state.mode === "playing") {
         state.dragon.vy += 1180 * dt; state.dragon.y += state.dragon.vy * dt; state.dragon.rotation = Math.max(-0.42, Math.min(1.15, state.dragon.vy / 650)); state.dragon.flap = Math.max(0, state.dragon.flap - dt * 5);
         state.cloudOffset = (state.cloudOffset + 16 * dt) % 420; state.groundOffset = (state.groundOffset + 145 * dt) % 48;
@@ -109,7 +120,7 @@ export default function GameCanvas() {
         const ground = h - 62, dragonR = 21;
         for (const p of state.pipes) {
           const gap = Math.max(145, 188 - state.score * 1.5), top = p.gapY - gap / 2, bottom = p.gapY + gap / 2;
-          if (!p.passed && p.x + 76 < state.dragon.x) { p.passed = true; state.score += 1; setScore(state.score); playSfx("score"); }
+          if (!p.passed && p.x + 76 < state.dragon.x) { p.passed = true; state.score += 1; setScore(state.score); playSfx("score"); burst(state, p.x + 38, state.dragon.y, "#ffe1a1", 14); }
           const hitX = state.dragon.x + dragonR > p.x && state.dragon.x - dragonR < p.x + 76;
           if (hitX && (state.dragon.y - dragonR < top || state.dragon.y + dragonR > bottom)) endGame();
         }
@@ -119,7 +130,7 @@ export default function GameCanvas() {
       drawScene(ctx, w, h, state, skyImg.current, dragonImg.current);
       raf.current = requestAnimationFrame(draw);
     };
-    const endGame = () => { if (state.mode !== "playing") return; playSfx("crash"); state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); localStorage.setItem("flappy-dragon-best", String(state.score)); } };
+    const endGame = () => { if (state.mode !== "playing") return; playSfx("crash"); burst(state, state.dragon.x, state.dragon.y, "#e96f45", 30); state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); localStorage.setItem("flappy-dragon-best", String(state.score)); } };
     (window as any).__flappyEnd = endGame;
     raf.current = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(raf.current!); window.removeEventListener("resize", resize); window.removeEventListener("keydown", key); canvas.removeEventListener("pointerdown", pointer); };
@@ -147,12 +158,16 @@ function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: G
   drawCloud(ctx, ((w - t * 10) % (w + 240)) - 180, h * .23, 1.1); drawCloud(ctx, ((w - t * 20 + 280) % (w + 300)) - 220, h * .58, .75);
   ctx.fillStyle = "#7d637d"; ctx.globalAlpha = .48; ctx.beginPath(); ctx.moveTo(0, h - 112); for (let x = 0; x <= w + 100; x += 90) ctx.lineTo(x, h - 112 - Math.sin(x * .018) * 30 - ((x / 90) % 2) * 24); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill(); ctx.globalAlpha = 1;
   for (const p of state.pipes) drawPipe(ctx, p.x, p.gapY, Math.max(145, 188 - state.score * 1.5), h);
+  drawParticles(ctx, state.particles);
   ctx.fillStyle = "#57445f"; ctx.fillRect(0, h - 62, w, 62); ctx.fillStyle = "#f2b26f"; for (let x = -48 - state.groundOffset; x < w + 48; x += 48) ctx.fillRect(x, h - 62, 30, 5); ctx.fillStyle = "#3f354e"; ctx.fillRect(0, h - 12, w, 12);
-  const d = state.dragon; ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); const sprite = prepareDragonSprite(dragon); if (sprite) { ctx.drawImage(sprite, -42, -30, 84, 60); } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-31, -25 - d.flap * 10); ctx.lineTo(-17, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(11, -4); ctx.lineTo(32, -22 - d.flap * 8); ctx.lineTo(22, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e99a4e"; ctx.beginPath(); ctx.arc(14, -7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(15, -7, 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
+  const d = state.dragon; ctx.save(); ctx.translate(d.x, d.y + Math.sin(t * 8) * 1.5); ctx.rotate(d.rotation + Math.sin(t * 5) * 0.018); const flapScale = 0.965 + Math.sin(t * 11) * 0.035; ctx.scale(1, flapScale); const sprite = prepareDragonSprite(dragon); if (sprite) { ctx.drawImage(sprite, -42, -30, 84, 60); } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-31, -25 - d.flap * 10); ctx.lineTo(-17, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(11, -4); ctx.lineTo(32, -22 - d.flap * 8); ctx.lineTo(22, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e99a4e"; ctx.beginPath(); ctx.arc(14, -7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(15, -7, 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
 }
 function prepareDragonSprite(dragon: HTMLImageElement | undefined): HTMLImageElement | undefined {
   if (!dragon || !dragon.complete || dragon.naturalWidth === 0) return undefined;
   return dragon;
+}
+function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[]) {
+  ctx.save(); particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life / p.maxLife); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.65 + p.life / p.maxLife), 0, Math.PI * 2); ctx.fill(); }); ctx.restore();
 }
 function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) { ctx.save(); ctx.globalAlpha = .16; ctx.fillStyle = "#fff2cf"; ctx.beginPath(); ctx.arc(x, y, 28 * s, 0, Math.PI * 2); ctx.arc(x + 34 * s, y - 13 * s, 39 * s, 0, Math.PI * 2); ctx.arc(x + 77 * s, y, 24 * s, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 function drawPipe(ctx: CanvasRenderingContext2D, x: number, gapY: number, gap: number, h: number) { const top = gapY - gap / 2, bottom = gapY + gap / 2; ctx.fillStyle = "#5d7561"; ctx.fillRect(x, 0, 76, top); ctx.fillRect(x, bottom, 76, h - bottom - 62); ctx.fillStyle = "#89a266"; ctx.fillRect(x - 7, top - 18, 90, 18); ctx.fillRect(x - 7, bottom, 90, 18); ctx.fillStyle = "#3f5d54"; ctx.fillRect(x + 12, 0, 9, Math.max(0, top - 18)); ctx.fillRect(x + 12, bottom + 18, 9, h - bottom - 80); }

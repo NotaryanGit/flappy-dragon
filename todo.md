@@ -1,5 +1,6 @@
-# Dragon swap tasks
+# Animation and particle tasks
 
-- [x] Prepare the newly uploaded white flying dragon as a transparent game sprite.
-- [x] Update the game to use the new dragon sprite without changing controls or audio.
-- [x] Verify the revised preview and save a checkpoint.
+- [x] Add subtle flap-cycle animation to the dragon sprite.
+- [x] Add score particle burst when a pipe is passed.
+- [x] Add crash particle burst when the dragon hits an obstacle.
+- [x] Verify the updated visuals and save a checkpoint.
