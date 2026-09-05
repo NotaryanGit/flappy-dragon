@@ -1,7 +1,5 @@
-# Revision tasks
+# Bug-fix tasks
 
-- [x] Replace the generated emerald dragon sprite with the user-uploaded white dragon image.
-- [x] Add a clear jump sound effect on flap input.
-- [x] Add a short score chime when a pipe is passed.
-- [x] Add a crash sound effect when the player collides or falls.
-- [x] Verify desktop and demo gameplay, then save a new checkpoint.
+- [x] Remove the runtime getImageData call on the remote dragon image.
+- [x] Create and upload a same-origin-safe transparent dragon sprite asset.
+- [x] Verify the SecurityError is gone and save a corrected checkpoint.

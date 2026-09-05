@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const SKY = "/manus-storage/flappy-dragon-sky_a3f55edd.png";
-const DRAGON = "/manus-storage/pasted_file_YUSfdr_image_f216097c.png";
+const DRAGON = "/manus-storage/flappy-dragon-clean_c2830cc0.png";
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
@@ -150,15 +150,9 @@ function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: G
   ctx.fillStyle = "#57445f"; ctx.fillRect(0, h - 62, w, 62); ctx.fillStyle = "#f2b26f"; for (let x = -48 - state.groundOffset; x < w + 48; x += 48) ctx.fillRect(x, h - 62, 30, 5); ctx.fillStyle = "#3f354e"; ctx.fillRect(0, h - 12, w, 12);
   const d = state.dragon; ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); const sprite = prepareDragonSprite(dragon); if (sprite) { ctx.drawImage(sprite, -42, -30, 84, 60); } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-31, -25 - d.flap * 10); ctx.lineTo(-17, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(11, -4); ctx.lineTo(32, -22 - d.flap * 8); ctx.lineTo(22, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e99a4e"; ctx.beginPath(); ctx.arc(14, -7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(15, -7, 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
 }
-function prepareDragonSprite(dragon: HTMLImageElement | undefined): HTMLCanvasElement | undefined {
+function prepareDragonSprite(dragon: HTMLImageElement | undefined): HTMLImageElement | undefined {
   if (!dragon || !dragon.complete || dragon.naturalWidth === 0) return undefined;
-  const cached = (dragon as HTMLImageElement & { __sprite?: HTMLCanvasElement }).__sprite;
-  if (cached) return cached;
-  const off = document.createElement("canvas"); off.width = dragon.naturalWidth; off.height = dragon.naturalHeight;
-  const ox = off.getContext("2d"); if (!ox) return undefined;
-  ox.drawImage(dragon, 0, 0); const pixels = ox.getImageData(0, 0, off.width, off.height);
-  for (let i = 0; i < pixels.data.length; i += 4) { const r = pixels.data[i], g = pixels.data[i + 1], b = pixels.data[i + 2]; if (r > 75 && r > g * 1.18 && r > b * 1.35 && g < 145) pixels.data[i + 3] = 0; }
-  ox.putImageData(pixels, 0, 0); (dragon as HTMLImageElement & { __sprite?: HTMLCanvasElement }).__sprite = off; return off;
+  return dragon;
 }
 function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) { ctx.save(); ctx.globalAlpha = .16; ctx.fillStyle = "#fff2cf"; ctx.beginPath(); ctx.arc(x, y, 28 * s, 0, Math.PI * 2); ctx.arc(x + 34 * s, y - 13 * s, 39 * s, 0, Math.PI * 2); ctx.arc(x + 77 * s, y, 24 * s, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 function drawPipe(ctx: CanvasRenderingContext2D, x: number, gapY: number, gap: number, h: number) { const top = gapY - gap / 2, bottom = gapY + gap / 2; ctx.fillStyle = "#5d7561"; ctx.fillRect(x, 0, 76, top); ctx.fillRect(x, bottom, 76, h - bottom - 62); ctx.fillStyle = "#89a266"; ctx.fillRect(x - 7, top - 18, 90, 18); ctx.fillRect(x - 7, bottom, 90, 18); ctx.fillStyle = "#3f5d54"; ctx.fillRect(x + 12, 0, 9, Math.max(0, top - 18)); ctx.fillRect(x + 12, bottom + 18, 9, h - bottom - 80); }
