@@ -16,7 +16,7 @@ type GameState = {
   best: number;
   time: number;
   last: number;
-  dragon: { x: number; y: number; vy: number; rotation: number; flap: number };
+  dragon: { x: number; y: number; vy: number; rotation: number; flap: number; anticipation: number; flapPending: boolean };
   pipes: { x: number; gapY: number; passed: boolean }[];
   cloudOffset: number;
   groundOffset: number;
@@ -27,7 +27,7 @@ type GameState = {
 
 const initialState = (best = 0, demo = false): GameState => ({
   mode: "ready", score: 0, best, time: 0, last: 0,
-  dragon: { x: 0, y: 0, vy: 0, rotation: 0, flap: 0 },
+  dragon: { x: 0, y: 0, vy: 0, rotation: 0, flap: 0, anticipation: 0, flapPending: false },
   pipes: [],   cloudOffset: 0, groundOffset: 0, particles: [], shake: 0, demo,
 });
 
@@ -102,8 +102,8 @@ export default function GameCanvas() {
     dragonImgs.current = [loadImage(DRAGON), loadImage(POSE_UP), loadImage(POSE_DOWN)]; skyImg.current = loadImage(SKY); if (state.demo) { state.mode = "playing"; state.dragon.x = canvas.clientWidth * 0.28; state.dragon.y = canvas.clientHeight * 0.47; setMode("playing"); }
 
     const flap = () => {
-      if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.vy = -440; playSfx("jump"); setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
-      state.dragon.vy = -440; state.dragon.flap = 1; playSfx("jump");
+      if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.anticipation = 1; state.dragon.flapPending = true; playSfx("jump"); setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
+      state.dragon.anticipation = 1; state.dragon.flapPending = true; playSfx("jump");
     };
     const key = (e: KeyboardEvent) => { if (["Space", "ArrowUp"].includes(e.code)) { e.preventDefault(); flap(); } };
     const pointer = () => flap();
@@ -114,7 +114,7 @@ export default function GameCanvas() {
       const dt = Math.min((now - (state.last || now)) / 1000, 0.033); state.last = now; state.time += dt;
       state.particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.gravity * dt; p.life -= dt; }); state.particles = state.particles.filter(p => p.life > 0);
       if (state.mode === "playing") {
-        state.dragon.vy += 1180 * dt; state.dragon.y += state.dragon.vy * dt; state.dragon.rotation = Math.max(-0.42, Math.min(1.15, state.dragon.vy / 650)); state.dragon.flap = Math.max(0, state.dragon.flap - dt * 5);
+        state.dragon.vy += 1180 * dt; state.dragon.y += state.dragon.vy * dt; state.dragon.rotation = Math.max(-0.42, Math.min(1.15, state.dragon.vy / 650)); state.dragon.flap = Math.max(0, state.dragon.flap - dt * 5); state.dragon.anticipation = Math.max(0, state.dragon.anticipation - dt * 8); if (state.dragon.flapPending && state.dragon.anticipation < 0.35) { state.dragon.vy = -440; state.dragon.flap = 1; state.dragon.flapPending = false; }
         state.cloudOffset = (state.cloudOffset + 16 * dt) % 420; state.groundOffset = (state.groundOffset + 145 * dt) % 48;
         const speed = 188 + Math.min(state.score * 3, 72);
         if (!state.pipes.length || state.pipes[state.pipes.length - 1].x < w - 265) state.pipes.push({ x: w + 30, gapY: h * 0.34 + Math.random() * h * 0.28, passed: false });
@@ -160,7 +160,7 @@ function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: G
   for (const p of state.pipes) drawPipe(ctx, p.x, p.gapY, Math.max(145, 188 - state.score * 1.5), h);
   drawParticles(ctx, state.particles);
   ctx.fillStyle = "#57445f"; ctx.fillRect(0, h - 62, w, 62); ctx.fillStyle = "#f2b26f"; for (let x = -48 - state.groundOffset; x < w + 48; x += 48) ctx.fillRect(x, h - 62, 30, 5); ctx.fillStyle = "#3f354e"; ctx.fillRect(0, h - 12, w, 12);
-  const d = state.dragon; ctx.save(); ctx.translate(d.x, d.y + Math.sin(t * 8) * 1.5); ctx.rotate(d.rotation + Math.sin(t * 5) * 0.018); const flapScale = 0.965 + Math.sin(t * 11) * 0.035; ctx.scale(1, flapScale); const sprite = prepareDragonSprite(dragon); const nextSprite = prepareDragonSprite(nextDragon); if (sprite || nextSprite) { if (sprite) { ctx.globalAlpha = 1 - poseBlend; ctx.drawImage(sprite, -42, -30, 84, 60); } if (nextSprite) { ctx.globalAlpha = poseBlend; ctx.drawImage(nextSprite, -42, -30, 84, 60); } ctx.globalAlpha = 1; } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-31, -25 - d.flap * 10); ctx.lineTo(-17, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(11, -4); ctx.lineTo(32, -22 - d.flap * 8); ctx.lineTo(22, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e99a4e"; ctx.beginPath(); ctx.arc(14, -7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(15, -7, 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
+  const d = state.dragon; const anticipation = Math.sin((1 - d.anticipation) * Math.PI); const trailStrength = state.mode === "playing" ? Math.min(1, Math.abs(Math.sin(t * 6)) * 1.25) : 0; ctx.save(); ctx.translate(d.x, d.y + Math.sin(t * 8) * 1.5 + anticipation * 3); ctx.rotate(d.rotation + Math.sin(t * 5) * 0.018 - anticipation * 0.07); const flapScale = 0.965 + Math.sin(t * 11) * 0.035; ctx.scale(1 + anticipation * 0.025, flapScale - anticipation * 0.035); const sprite = prepareDragonSprite(dragon); const nextSprite = prepareDragonSprite(nextDragon); if (sprite || nextSprite) { if (trailStrength > 0.2 && (sprite || nextSprite)) { ctx.globalCompositeOperation = "screen"; if (sprite) { ctx.globalAlpha = 0.07 * trailStrength; ctx.drawImage(sprite, -54, -30, 84, 60); ctx.globalAlpha = 0.035 * trailStrength; ctx.drawImage(sprite, -66, -30, 84, 60); } ctx.globalCompositeOperation = "source-over"; } if (sprite) { ctx.globalAlpha = 1 - poseBlend; ctx.drawImage(sprite, -42, -30, 84, 60); } if (nextSprite) { ctx.globalAlpha = poseBlend; ctx.drawImage(nextSprite, -42, -30, 84, 60); } ctx.globalAlpha = 1; } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-31, -25 - d.flap * 10); ctx.lineTo(-17, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(11, -4); ctx.lineTo(32, -22 - d.flap * 8); ctx.lineTo(22, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e99a4e"; ctx.beginPath(); ctx.arc(14, -7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(15, -7, 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
 }
 function smoothstep(value: number) { return value * value * (3 - 2 * value); }
 function prepareDragonSprite(dragon: HTMLImageElement | undefined): HTMLImageElement | undefined {

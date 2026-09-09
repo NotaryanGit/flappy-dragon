@@ -1,5 +1,6 @@
-# Wing transition task
+# Dynamic flight tasks
 
-- [x] Blend adjacent wing-pose sprites with eased opacity transitions.
-- [x] Preserve the current night background, gameplay, sound, score, and particle effects.
-- [x] Verify the animation and save a checkpoint.
+- [x] Add a short pre-flap anticipation motion before the dragon rises.
+- [x] Add a faint wing trail during faster pose transitions.
+- [x] Preserve the current night scene, controls, sounds, score, and particles.
+- [x] Verify the revised flight feel and save a checkpoint.
