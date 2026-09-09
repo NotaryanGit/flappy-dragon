@@ -1,6 +1,6 @@
-# Dynamic flight tasks
+# Accessibility settings tasks
 
-- [x] Add a short pre-flap anticipation motion before the dragon rises.
-- [x] Add a faint wing trail during faster pose transitions.
-- [x] Preserve the current night scene, controls, sounds, score, and particles.
-- [x] Verify the revised flight feel and save a checkpoint.
+- [x] Add a visible settings menu with an accessible open/close control.
+- [x] Add a persistent reduced-motion toggle.
+- [x] Disable anticipation and trail effects when reduced motion is enabled.
+- [x] Verify the toggle and save a checkpoint.
