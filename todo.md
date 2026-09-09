@@ -1,6 +1,6 @@
-# Animation and particle tasks
+# Night-flight animation tasks
 
-- [x] Add subtle flap-cycle animation to the dragon sprite.
-- [x] Add score particle burst when a pipe is passed.
-- [x] Add crash particle burst when the dragon hits an obstacle.
-- [x] Verify the updated visuals and save a checkpoint.
+- [x] Prepare the uploaded starry mountain background for the game canvas.
+- [x] Create multiple transparent flap poses from the current dragon sprite.
+- [x] Integrate pose cycling without changing controls, sound, scoring, or particles.
+- [x] Verify the night preview and save a checkpoint.

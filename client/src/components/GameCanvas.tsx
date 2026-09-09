@@ -1,8 +1,10 @@
 /* Storybook Ember Sky: warm illustrated arcade, tactile paper UI, ember-orange action states. */
 import { useEffect, useRef, useState } from "react";
 
-const SKY = "/manus-storage/flappy-dragon-sky_a3f55edd.png";
+const SKY = "/manus-storage/ChatGPTImageSep9,2026,10_44_19PM_5dac135d.png";
 const DRAGON = "/manus-storage/flappy-dragon-new-clean_b9390ffc.png";
+const POSE_UP = "/manus-storage/flappy-dragon-pose-up-clean_456e22b4.png";
+const POSE_DOWN = "/manus-storage/flappy-dragon-pose-down-clean_f8681366.png";
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
@@ -78,7 +80,7 @@ export default function GameCanvas() {
   const [saved, setSaved] = useState(false);
   const stateRef = useRef<GameState>(initialState(best, new URLSearchParams(location.search).has("demo")));
   const raf = useRef<number | undefined>(undefined);
-  const dragonImg = useRef<HTMLImageElement | undefined>(undefined);
+  const dragonImgs = useRef<HTMLImageElement[]>([]);
   const skyImg = useRef<HTMLImageElement | undefined>(undefined);
 
   useEffect(() => {
@@ -96,8 +98,8 @@ export default function GameCanvas() {
       if (!state.dragon.x) { state.dragon.x = rect.width * 0.27; state.dragon.y = rect.height * 0.47; } if (state.mode === "ready") { state.dragon.x = rect.width * 0.72; state.dragon.y = rect.height * 0.42; }
     };
     resize(); window.addEventListener("resize", resize);
-    const load = (src: string, ref: React.MutableRefObject<HTMLImageElement | undefined>) => { const img = new Image(); img.src = src; ref.current = img; };
-    load(DRAGON, dragonImg); load(SKY, skyImg); if (state.demo) { state.mode = "playing"; state.dragon.x = canvas.clientWidth * 0.28; state.dragon.y = canvas.clientHeight * 0.47; setMode("playing"); }
+    const loadImage = (src: string) => { const img = new Image(); img.src = src; return img; };
+    dragonImgs.current = [loadImage(DRAGON), loadImage(POSE_UP), loadImage(POSE_DOWN)]; skyImg.current = loadImage(SKY); if (state.demo) { state.mode = "playing"; state.dragon.x = canvas.clientWidth * 0.28; state.dragon.y = canvas.clientHeight * 0.47; setMode("playing"); }
 
     const flap = () => {
       if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.vy = -440; playSfx("jump"); setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
@@ -127,7 +129,7 @@ export default function GameCanvas() {
         if (state.dragon.y < 28 || state.dragon.y > ground - 4) endGame();
         if (state.demo && state.time > 1.1) { const target = state.pipes[0]?.gapY || h * .48; if (state.dragon.y > target + 18 || state.dragon.vy > 140) flap(); }
       }
-      drawScene(ctx, w, h, state, skyImg.current, dragonImg.current);
+      drawScene(ctx, w, h, state, skyImg.current, dragonImgs.current);
       raf.current = requestAnimationFrame(draw);
     };
     const endGame = () => { if (state.mode !== "playing") return; playSfx("crash"); burst(state, state.dragon.x, state.dragon.y, "#e96f45", 30); state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); localStorage.setItem("flappy-dragon-best", String(state.score)); } };
@@ -151,12 +153,10 @@ export default function GameCanvas() {
   </div>;
 }
 
-function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: GameState, sky: HTMLImageElement | undefined, dragon: HTMLImageElement | undefined) {
-  const t = state.time; ctx.save(); if (state.shake > 0) { ctx.translate(Math.random() * state.shake - state.shake / 2, Math.random() * state.shake - state.shake / 2); state.shake *= .9; }
-  const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#f6a36f"); g.addColorStop(.55, "#e98372"); g.addColorStop(1, "#aa7185"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-  if (sky?.complete && sky.naturalWidth) { ctx.globalAlpha = .42; const scale = Math.max(w / sky.width, h / sky.height); ctx.drawImage(sky, 0, 0, sky.width * scale, sky.height * scale); ctx.globalAlpha = 1; }
-  drawCloud(ctx, ((w - t * 10) % (w + 240)) - 180, h * .23, 1.1); drawCloud(ctx, ((w - t * 20 + 280) % (w + 300)) - 220, h * .58, .75);
-  ctx.fillStyle = "#7d637d"; ctx.globalAlpha = .48; ctx.beginPath(); ctx.moveTo(0, h - 112); for (let x = 0; x <= w + 100; x += 90) ctx.lineTo(x, h - 112 - Math.sin(x * .018) * 30 - ((x / 90) % 2) * 24); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill(); ctx.globalAlpha = 1;
+function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: GameState, sky: HTMLImageElement | undefined, dragons: HTMLImageElement[]) {
+  const t = state.time; const poseIndex = state.mode === "ready" ? 1 : Math.floor((t * 8) % 3); const dragon = dragons?.[poseIndex] || dragons?.[0]; ctx.save(); if (state.shake > 0) { ctx.translate(Math.random() * state.shake - state.shake / 2, Math.random() * state.shake - state.shake / 2); state.shake *= .9; }
+  const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#061231"); g.addColorStop(.55, "#0a2b62"); g.addColorStop(1, "#06112e"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  if (sky?.complete && sky.naturalWidth) { const scale = Math.max(w / sky.width, h / sky.height); ctx.drawImage(sky, 0, 0, sky.width * scale, sky.height * scale); }
   for (const p of state.pipes) drawPipe(ctx, p.x, p.gapY, Math.max(145, 188 - state.score * 1.5), h);
   drawParticles(ctx, state.particles);
   ctx.fillStyle = "#57445f"; ctx.fillRect(0, h - 62, w, 62); ctx.fillStyle = "#f2b26f"; for (let x = -48 - state.groundOffset; x < w + 48; x += 48) ctx.fillRect(x, h - 62, 30, 5); ctx.fillStyle = "#3f354e"; ctx.fillRect(0, h - 12, w, 12);
