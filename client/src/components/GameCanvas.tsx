@@ -106,8 +106,8 @@ export default function GameCanvas() {
     dragonImgs.current = [loadImage(DRAGON), loadImage(POSE_UP), loadImage(POSE_DOWN)]; skyImg.current = loadImage(SKY); if (state.demo) { state.mode = "playing"; state.dragon.x = canvas.clientWidth * 0.28; state.dragon.y = canvas.clientHeight * 0.47; setMode("playing"); }
 
     const flap = () => {
-      if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.anticipation = state.reducedMotion ? 0 : 1; state.dragon.flapPending = !state.reducedMotion; if (state.reducedMotion) { state.dragon.vy = -440; state.dragon.flap = 1; } playSfx("jump"); setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
-      state.dragon.anticipation = state.reducedMotion ? 0 : 1; state.dragon.flapPending = !state.reducedMotion; if (state.reducedMotion) { state.dragon.vy = -440; state.dragon.flap = 1; } playSfx("jump");
+      if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.vy = -440; state.dragon.flap = 1; state.dragon.anticipation = state.reducedMotion ? 0 : 1; state.dragon.flapPending = false; playSfx("jump"); setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
+      state.dragon.vy = -440; state.dragon.flap = 1; state.dragon.anticipation = state.reducedMotion ? 0 : 1; state.dragon.flapPending = false; playSfx("jump");
     };
     const key = (e: KeyboardEvent) => { if (["Space", "ArrowUp"].includes(e.code)) { e.preventDefault(); flap(); } };
     const pointer = () => flap();
@@ -118,7 +118,7 @@ export default function GameCanvas() {
       const dt = Math.min((now - (state.last || now)) / 1000, 0.033); state.last = now; state.time += dt;
       state.particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.gravity * dt; p.life -= dt; }); state.particles = state.particles.filter(p => p.life > 0);
       if (state.mode === "playing") {
-        state.dragon.vy += 1180 * dt; state.dragon.y += state.dragon.vy * dt; state.dragon.rotation = Math.max(-0.42, Math.min(1.15, state.dragon.vy / 650)); state.dragon.flap = Math.max(0, state.dragon.flap - dt * 5); state.dragon.anticipation = Math.max(0, state.dragon.anticipation - dt * 8); if (state.dragon.flapPending && state.dragon.anticipation < 0.35) { state.dragon.vy = -440; state.dragon.flap = 1; state.dragon.flapPending = false; }
+        state.dragon.vy += 1180 * dt; state.dragon.y += state.dragon.vy * dt; state.dragon.rotation = Math.max(-0.42, Math.min(1.15, state.dragon.vy / 650)); state.dragon.flap = Math.max(0, state.dragon.flap - dt * 5); state.dragon.anticipation = Math.max(0, state.dragon.anticipation - dt * 8);
         state.cloudOffset = (state.cloudOffset + 16 * dt) % 420; state.groundOffset = (state.groundOffset + 145 * dt) % 48;
         const speed = 188 + Math.min(state.score * 3, 72);
         if (!state.pipes.length || state.pipes[state.pipes.length - 1].x < w - 265) state.pipes.push({ x: w + 30, gapY: h * 0.34 + Math.random() * h * 0.28, passed: false });

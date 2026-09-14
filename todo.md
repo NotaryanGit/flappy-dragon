@@ -1,6 +1,6 @@
-# Accessibility settings tasks
+# Input responsiveness bug fix
 
-- [x] Add a visible settings menu with an accessible open/close control.
-- [x] Add a persistent reduced-motion toggle.
-- [x] Disable anticipation and trail effects when reduced motion is enabled.
-- [x] Verify the toggle and save a checkpoint.
+- [x] Make Space, click, and touch trigger an immediate upward impulse.
+- [x] Keep the anticipation effect visual-only so it cannot delay the flap.
+- [x] Verify repeated inputs and preserve audio, scoring, particles, and reduced-motion behavior.
+- [x] Save a corrected checkpoint.
