@@ -1,6 +1,6 @@
-# Local high-score tracking
+# Input-only flapping
 
-- [x] Persist the player’s best score across browser sessions.
-- [x] Keep the HUD, game-over screen, and leaderboard aligned with the stored best.
-- [x] Handle malformed or unavailable local storage safely.
-- [x] Verify persistence behavior and save a checkpoint.
+- [x] Remove continuous time-based wing-pose cycling.
+- [x] Trigger the flap pose only on Space, click, or touch input.
+- [x] Preserve flight physics, audio, scoring, particles, reduced-motion settings, and high scores.
+- [x] Verify the revised controls and save a checkpoint.
