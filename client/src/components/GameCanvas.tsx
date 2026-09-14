@@ -33,7 +33,20 @@ const initialState = (best = 0, demo = false): GameState => ({
 });
 
 function readScores(): ScoreRow[] {
-  try { return JSON.parse(localStorage.getItem("flappy-dragon-scores") || "[]"); } catch { return []; }
+  try {
+    const parsed = JSON.parse(localStorage.getItem("flappy-dragon-scores") || "[]");
+    return Array.isArray(parsed) ? parsed.filter((row): row is ScoreRow => row && typeof row.score === "number" && typeof row.name === "string" && typeof row.date === "string") : [];
+  } catch { return []; }
+}
+function readBestScore(scores = readScores()): number {
+  try {
+    const stored = Number(localStorage.getItem("flappy-dragon-best") || 0);
+    const fromScores = scores.reduce((highest, row) => Math.max(highest, row.score), 0);
+    return Math.max(Number.isFinite(stored) ? stored : 0, fromScores);
+  } catch { return scores.reduce((highest, row) => Math.max(highest, row.score), 0); }
+}
+function persistBestScore(score: number) {
+  try { localStorage.setItem("flappy-dragon-best", String(score)); } catch { /* Storage can be unavailable in private browsing. */ }
 }
 let audioContext: AudioContext | null = null;
 function playSfx(kind: "jump" | "score" | "crash") {
@@ -65,7 +78,7 @@ function saveScore(name: string, score: number) {
   const clean = name.replace(/[^a-z0-9 _-]/gi, "").trim().slice(0, 12) || "SKY PILOT";
   const next = [...readScores(), { name: clean, score, date: new Date().toISOString() }]
     .sort((a, b) => b.score - a.score).slice(0, 10);
-  localStorage.setItem("flappy-dragon-scores", JSON.stringify(next));
+  try { localStorage.setItem("flappy-dragon-scores", JSON.stringify(next)); } catch { /* Keep the in-memory score even if storage is unavailable. */ }
   return next;
 }
 
@@ -74,8 +87,8 @@ export default function GameCanvas() {
   const shellRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<Mode>("ready");
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(() => Number(localStorage.getItem("flappy-dragon-best") || 0));
   const [scores, setScores] = useState<ScoreRow[]>(() => readScores());
+  const [best, setBest] = useState(() => readBestScore());
   const [showBoard, setShowBoard] = useState(false);
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
@@ -136,7 +149,7 @@ export default function GameCanvas() {
       drawScene(ctx, w, h, state, skyImg.current, dragonImgs.current);
       raf.current = requestAnimationFrame(draw);
     };
-    const endGame = () => { if (state.mode !== "playing") return; playSfx("crash"); burst(state, state.dragon.x, state.dragon.y, "#e96f45", 30); state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); localStorage.setItem("flappy-dragon-best", String(state.score)); } };
+    const endGame = () => { if (state.mode !== "playing") return; playSfx("crash"); burst(state, state.dragon.x, state.dragon.y, "#e96f45", 30); state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); persistBestScore(state.score); } };
     (window as any).__flappyEnd = endGame;
     raf.current = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(raf.current!); window.removeEventListener("resize", resize); window.removeEventListener("keydown", key); canvas.removeEventListener("pointerdown", pointer); };

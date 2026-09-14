@@ -1,6 +1,6 @@
-# Input responsiveness bug fix
+# Local high-score tracking
 
-- [x] Make Space, click, and touch trigger an immediate upward impulse.
-- [x] Keep the anticipation effect visual-only so it cannot delay the flap.
-- [x] Verify repeated inputs and preserve audio, scoring, particles, and reduced-motion behavior.
-- [x] Save a corrected checkpoint.
+- [x] Persist the player’s best score across browser sessions.
+- [x] Keep the HUD, game-over screen, and leaderboard aligned with the stored best.
+- [x] Handle malformed or unavailable local storage safely.
+- [x] Verify persistence behavior and save a checkpoint.
