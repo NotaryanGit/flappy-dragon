@@ -1,14 +1,10 @@
 /* Storybook Ember Sky: warm illustrated arcade, tactile paper UI, ember-orange action states. */
 import { useEffect, useRef, useState } from "react";
-import dragonMascot from "@/assets/dragon-mascot.png";
-import dragonPoseUp from "@/assets/dragon-pose-up.png";
-import dragonPoseDown from "@/assets/dragon-pose-down.png";
+import dragonMascotFlapping from "@/assets/dragon-mascot-flapping.png";
 
 const SKY = "/manus-storage/ChatGPTImageSep9,2026,10_44_19PM_5dac135d.png";
-// Keep the pre-flight mascot and the canvas base pose on the same repo-owned asset.
-const DRAGON = dragonMascot;
-const POSE_UP = dragonPoseUp;
-const POSE_DOWN = dragonPoseDown;
+// This is the user's exact 200-frame transparent animation. No pose interpolation or trail is applied.
+const DRAGON = "/manus-storage/dragon-flapping_c03c69a5.webp";
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
@@ -101,7 +97,7 @@ export default function GameCanvas() {
   const stateRef = useRef<GameState>(initialState(best, new URLSearchParams(location.search).has("demo")));
   stateRef.current.reducedMotion = reducedMotion;
   const raf = useRef<number | undefined>(undefined);
-  const dragonImgs = useRef<HTMLImageElement[]>([]);
+  const dragonImg = useRef<HTMLImageElement | undefined>(undefined);
   const skyImg = useRef<HTMLImageElement | undefined>(undefined);
 
   useEffect(() => {
@@ -120,7 +116,7 @@ export default function GameCanvas() {
     };
     resize(); window.addEventListener("resize", resize);
     const loadImage = (src: string) => { const img = new Image(); img.src = src; return img; };
-    dragonImgs.current = [loadImage(DRAGON), loadImage(POSE_UP), loadImage(POSE_DOWN)]; skyImg.current = loadImage(SKY); if (state.demo) { state.mode = "playing"; state.dragon.x = canvas.clientWidth * 0.28; state.dragon.y = canvas.clientHeight * 0.47; setMode("playing"); }
+    dragonImg.current = loadImage(DRAGON); skyImg.current = loadImage(SKY); if (state.demo) { state.mode = "playing"; state.dragon.x = canvas.clientWidth * 0.28; state.dragon.y = canvas.clientHeight * 0.47; setMode("playing"); }
 
     const flap = () => {
       if (state.mode !== "playing") { state.mode = "playing"; state.score = 0; state.pipes = []; state.dragon.y = canvas.clientHeight * 0.47; state.dragon.vy = -440; state.dragon.flap = 1; state.dragon.anticipation = state.reducedMotion ? 0 : 1; state.dragon.flapPending = false; playSfx("jump"); setMode("playing"); setScore(0); setShowBoard(false); setSaved(false); return; }
@@ -150,7 +146,7 @@ export default function GameCanvas() {
         if (state.dragon.y < 28 || state.dragon.y > ground - 4) endGame();
         if (state.demo && state.time > 1.1) { const target = state.pipes[0]?.gapY || h * .48; if (state.dragon.y > target + 18 || state.dragon.vy > 140) flap(); }
       }
-      drawScene(ctx, w, h, state, skyImg.current, dragonImgs.current);
+      drawScene(ctx, w, h, state, skyImg.current, dragonImg.current);
       raf.current = requestAnimationFrame(draw);
     };
     const endGame = () => { if (state.mode !== "playing") return; playSfx("crash"); burst(state, state.dragon.x, state.dragon.y, "#e96f45", 30); state.mode = "over"; state.shake = 8; setMode("over"); setScore(state.score); if (state.score > best) { setBest(state.score); persistBestScore(state.score); } };
@@ -166,28 +162,23 @@ export default function GameCanvas() {
     <canvas ref={canvasRef} aria-label="Flappy Dragon game canvas" />
     <div className="game-brand"><span className="brand-mark">✦</span><div><strong>FLAPPY DRAGON</strong><small>SKY ARCADE · FLIGHT LOG 01</small></div></div>
     <div className="hud"><span className="hud-label">SCORE</span><strong>{String(score).padStart(2, "0")}</strong><span className="hud-divider"/><span className="hud-label">BEST</span><strong>{String(best).padStart(2, "0")}</strong></div>
-    {mode === "ready" && <div className="screen-card intro-card"><div className="intro-mascot-wrap"><img className="intro-mascot" src={dragonMascot} alt="The Flappy Dragon mascot" /><span className="mascot-caption">YOUR PILOT</span></div><div className="eyebrow">A tiny dragon. A very big sky.</div><h1>Keep your<br/><em>wings clear.</em></h1><p>Tap, click, or press Space to rise through the ruins. How far can you fly?</p><button onClick={() => (canvasRef.current?.dispatchEvent(new PointerEvent("pointerdown")))} className="primary-button"><span>START FLIGHT</span><b>↗</b></button><div className="hint"><span>SPACE</span> or tap anywhere</div></div>}
+    {mode === "ready" && <div className="screen-card intro-card"><div className="intro-mascot-wrap"><img className="intro-mascot" src={dragonMascotFlapping} alt="The Flappy Dragon mascot with its wings spread" /><span className="mascot-caption">YOUR PILOT</span></div><div className="eyebrow">A tiny dragon. A very big sky.</div><h1>Keep your<br/><em>wings clear.</em></h1><p>Tap, click, or press Space to rise through the ruins. How far can you fly?</p><button onClick={() => (canvasRef.current?.dispatchEvent(new PointerEvent("pointerdown")))} className="primary-button"><span>START FLIGHT</span><b>↗</b></button><div className="hint"><span>SPACE</span> or tap anywhere</div></div>}
     {mode === "playing" && <div className="flight-tip">TAP TO FLAP <span>·</span> STAY LIGHT</div>}
     {mode === "over" && <div className="screen-card over-card"><div className="eyebrow">Flight log complete</div><h2>Clouds caught you.</h2><div className="result-line"><div><small>SCORE</small><strong>{score}</strong></div><div><small>BEST</small><strong>{best}</strong></div></div>{!saved ? <><label className="name-label" htmlFor="pilot-name">Save this flight</label><div className="name-row"><input id="pilot-name" maxLength={12} placeholder="YOUR NAME" value={name} onChange={e => setName(e.target.value)} /><button onClick={submit} className="small-button">SAVE</button></div></> : <div className="saved-note">✦ Flight logged to the hall of fame.</div>}<div className="over-actions"><button onClick={restart} className="primary-button"><span>FLY AGAIN</span><b>↗</b></button><button onClick={() => setShowBoard(true)} className="quiet-button">VIEW LEADERBOARD <span>→</span></button></div></div>}
     <div className="bottom-rail"><button className="rail-button" onClick={() => setShowBoard(true)}>✦ <span>FLIGHT LOG</span></button><span className="rail-copy">MADE FOR REPLAY · DRAGONS WELCOME</span><div className="rail-actions"><button className="rail-button sound">◒ <span>SOUND ON</span></button><button className="rail-button" onClick={() => setSettingsOpen(true)} aria-label="Open settings">⚙ <span>SETTINGS</span></button></div></div>
-    {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><section className="settings-card" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button><div className="eyebrow">Flight preferences</div><h2 id="settings-title">Settings</h2><p>Adjust motion to keep the flight comfortable.</p><div className="setting-row"><div><strong>Reduced motion</strong><small>Turns off the pre-flap anticipation and wing trail.</small></div><button className={`motion-toggle ${reducedMotion ? "is-on" : ""}`} role="switch" aria-checked={reducedMotion} onClick={() => { const next = !reducedMotion; setReducedMotion(next); localStorage.setItem("flappy-dragon-reduced-motion", String(next)); }}><span /></button></div><button className="settings-done" onClick={() => setSettingsOpen(false)}>DONE</button></section></div>}
+    {settingsOpen && <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}><section className="settings-card" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button><div className="eyebrow">Flight preferences</div><h2 id="settings-title">Settings</h2><p>Adjust motion to keep the flight comfortable.</p><div className="setting-row"><div><strong>Reduced motion</strong><small>Keeps gameplay movement calmer without changing the uploaded dragon animation.</small></div><button className={`motion-toggle ${reducedMotion ? "is-on" : ""}`} role="switch" aria-checked={reducedMotion} onClick={() => { const next = !reducedMotion; setReducedMotion(next); localStorage.setItem("flappy-dragon-reduced-motion", String(next)); }}><span /></button></div><button className="settings-done" onClick={() => setSettingsOpen(false)}>DONE</button></section></div>}
     {showBoard && <div className="board-backdrop" onClick={() => setShowBoard(false)}><div className="leaderboard" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setShowBoard(false)}>×</button><div className="eyebrow">The flight log</div><h2>Hall of the sky</h2><p>Local scores from this browser.</p>{scores.length ? <div className="score-list">{scores.map((row, i) => <div className="score-row" key={`${row.date}-${i}`}><span className="rank">{String(i + 1).padStart(2, "0")}</span><strong>{row.name}</strong><b>{row.score}</b></div>)}</div> : <div className="empty-board">No flights logged yet.<br/>Be the first one through the clouds.</div>}<button className="primary-button board-cta" onClick={() => { setShowBoard(false); restart(); }}><span>TAKE OFF</span><b>↗</b></button></div></div>}
   </div>;
 }
 
-function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: GameState, sky: HTMLImageElement | undefined, dragons: HTMLImageElement[]) {
-  const t = state.time; const flapProgress = Math.max(0, Math.min(1, state.dragon.flap)); const poseIndex = state.mode === "ready" ? 0 : flapProgress > 0.66 ? 1 : flapProgress > 0.2 ? 2 : 0; const poseBlend = state.mode === "ready" ? 0 : poseIndex === 1 ? smoothstep((1 - flapProgress) / 0.34) : poseIndex === 2 ? smoothstep((0.66 - flapProgress) / 0.46) : smoothstep(flapProgress / 0.2); const dragon = dragons?.[poseIndex] || dragons?.[0]; const nextDragon = dragons?.[poseIndex === 1 ? 2 : 0] || dragons?.[0]; ctx.save(); if (state.shake > 0) { ctx.translate(Math.random() * state.shake - state.shake / 2, Math.random() * state.shake - state.shake / 2); state.shake *= .9; }
+function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, state: GameState, sky: HTMLImageElement | undefined, dragon: HTMLImageElement | undefined) {
+  ctx.save(); if (state.shake > 0) { ctx.translate(Math.random() * state.shake - state.shake / 2, Math.random() * state.shake - state.shake / 2); state.shake *= .9; }
   const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#061231"); g.addColorStop(.55, "#0a2b62"); g.addColorStop(1, "#06112e"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   if (sky?.complete && sky.naturalWidth) { const scale = Math.max(w / sky.width, h / sky.height); ctx.drawImage(sky, 0, 0, sky.width * scale, sky.height * scale); }
   for (const p of state.pipes) drawPipe(ctx, p.x, p.gapY, Math.max(145, 188 - state.score * 1.5), h);
   drawParticles(ctx, state.particles);
   ctx.fillStyle = "#57445f"; ctx.fillRect(0, h - 62, w, 62); ctx.fillStyle = "#f2b26f"; for (let x = -48 - state.groundOffset; x < w + 48; x += 48) ctx.fillRect(x, h - 62, 30, 5); ctx.fillStyle = "#3f354e"; ctx.fillRect(0, h - 12, w, 12);
-  const d = state.dragon; const anticipation = state.reducedMotion ? 0 : Math.sin(d.anticipation * Math.PI); const trailStrength = state.reducedMotion ? 0 : flapProgress > 0.2 ? Math.min(1, flapProgress * 1.2) : 0; const bob = state.reducedMotion ? 0 : anticipation * 1.5; const microTilt = state.reducedMotion ? 0 : anticipation * 0.018; ctx.save(); ctx.translate(d.x, d.y + bob + anticipation * 3); ctx.rotate(d.rotation + microTilt - anticipation * 0.07); const flapScale = 0.965 + flapProgress * 0.035; ctx.scale(1 + anticipation * 0.025, flapScale - anticipation * 0.035); const sprite = prepareDragonSprite(dragon); const nextSprite = prepareDragonSprite(nextDragon); if (sprite || nextSprite) { if (trailStrength > 0.2 && (sprite || nextSprite)) { ctx.globalCompositeOperation = "screen"; if (sprite) { ctx.globalAlpha = 0.07 * trailStrength; ctx.drawImage(sprite, -54, -30, 84, 60); ctx.globalAlpha = 0.035 * trailStrength; ctx.drawImage(sprite, -66, -30, 84, 60); } ctx.globalCompositeOperation = "source-over"; } if (sprite) { ctx.globalAlpha = 1 - poseBlend; ctx.drawImage(sprite, -42, -30, 84, 60); } if (nextSprite) { ctx.globalAlpha = poseBlend; ctx.drawImage(nextSprite, -42, -30, 84, 60); } ctx.globalAlpha = 1; } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-31, -25 - d.flap * 10); ctx.lineTo(-17, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#dcd4ef"; ctx.beginPath(); ctx.moveTo(11, -4); ctx.lineTo(32, -22 - d.flap * 8); ctx.lineTo(22, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e99a4e"; ctx.beginPath(); ctx.arc(14, -7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3e334d"; ctx.beginPath(); ctx.arc(15, -7, 1.5, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); ctx.restore();
-}
-function smoothstep(value: number) { return value * value * (3 - 2 * value); }
-function prepareDragonSprite(dragon: HTMLImageElement | undefined): HTMLImageElement | undefined {
-  if (!dragon || !dragon.complete || dragon.naturalWidth === 0) return undefined;
-  return dragon;
+  const d = state.dragon; ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); if (dragon?.complete && dragon.naturalWidth) { ctx.drawImage(dragon, -54, -30, 108, 61); } else { ctx.fillStyle = "#f4f0ef"; ctx.strokeStyle = "#6e6674"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 27, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); } ctx.restore(); ctx.restore();
 }
 function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[]) {
   ctx.save(); particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life / p.maxLife); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.65 + p.life / p.maxLife), 0, Math.PI * 2); ctx.fill(); }); ctx.restore();
