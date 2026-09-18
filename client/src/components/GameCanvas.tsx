@@ -1,9 +1,10 @@
 /* Storybook Ember Sky: warm illustrated arcade, tactile paper UI, ember-orange action states. */
 import { useEffect, useRef, useState } from "react";
+import rightFacingDragonLoop from "@/assets/right-facing-dragon-loop.webp";
 
 const SKY = "/manus-storage/ChatGPTImageSep9,2026,10_44_19PM_5dac135d.png";
-// Airborne 101-frame loop extracted from the uploaded animation; resting frames are excluded.
-const DRAGON = "/manus-storage/dragon-flap-loop_ee3cafcd.webp";
+// Repository-owned four-pose loop: the dragon faces right and only the wings animate.
+const DRAGON = rightFacingDragonLoop;
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
