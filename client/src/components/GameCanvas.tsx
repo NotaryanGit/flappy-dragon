@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import dragonMascotFlapping from "@/assets/dragon-mascot-flapping.png";
 
 const SKY = "/manus-storage/ChatGPTImageSep9,2026,10_44_19PM_5dac135d.png";
-// This is the user's exact 200-frame transparent animation. No pose interpolation or trail is applied.
-const DRAGON = "/manus-storage/dragon-flapping_c03c69a5.webp";
+// Use the verified wings-spread frame everywhere; no sleeping frame or overlay animation can appear.
+const DRAGON = dragonMascotFlapping;
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
