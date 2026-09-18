@@ -1,3 +1,3 @@
 # Flappy Dragon artwork
 
-`right-facing-dragon-loop.webp` is the repository-owned animated dragon sprite used by both the pre-flight mascot and in-game canvas. It contains six native-transparent frames assembled from four right-facing side-profile wing poses: down, halfway up, up, halfway down, then back through the cycle. The dragon faces right while the level scrolls left; no generated pose interpolation, trail, anticipation, or overlay animation is applied.
+The game uses three repository-owned native-transparent right-facing airborne PNG frames: `dragon-side-down.png`, `dragon-side-half-up.png`, and `dragon-side-up.png`. The canvas cycles them explicitly at runtime in a down → half-up → up → half-up loop, so wing movement is continuous and does not depend on animated-WebP playback. The same frame sequence drives the pre-flight mascot.
