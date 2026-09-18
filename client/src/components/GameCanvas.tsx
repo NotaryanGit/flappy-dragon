@@ -1,10 +1,9 @@
 /* Storybook Ember Sky: warm illustrated arcade, tactile paper UI, ember-orange action states. */
 import { useEffect, useRef, useState } from "react";
-import dragonMascotFlapping from "@/assets/dragon-mascot-flapping.png";
 
 const SKY = "/manus-storage/ChatGPTImageSep9,2026,10_44_19PM_5dac135d.png";
-// Use the verified wings-spread frame everywhere; no sleeping frame or overlay animation can appear.
-const DRAGON = dragonMascotFlapping;
+// Airborne 101-frame loop extracted from the uploaded animation; resting frames are excluded.
+const DRAGON = "/manus-storage/dragon-flap-loop_ee3cafcd.webp";
 
 type Mode = "ready" | "playing" | "over";
 type ScoreRow = { name: string; score: number; date: string };
@@ -162,7 +161,7 @@ export default function GameCanvas() {
     <canvas ref={canvasRef} aria-label="Flappy Dragon game canvas" />
     <div className="game-brand"><span className="brand-mark">✦</span><div><strong>FLAPPY DRAGON</strong><small>SKY ARCADE · FLIGHT LOG 01</small></div></div>
     <div className="hud"><span className="hud-label">SCORE</span><strong>{String(score).padStart(2, "0")}</strong><span className="hud-divider"/><span className="hud-label">BEST</span><strong>{String(best).padStart(2, "0")}</strong></div>
-    {mode === "ready" && <div className="screen-card intro-card"><div className="intro-mascot-wrap"><img className="intro-mascot" src={dragonMascotFlapping} alt="The Flappy Dragon mascot with its wings spread" /><span className="mascot-caption">YOUR PILOT</span></div><div className="eyebrow">A tiny dragon. A very big sky.</div><h1>Keep your<br/><em>wings clear.</em></h1><p>Tap, click, or press Space to rise through the ruins. How far can you fly?</p><button onClick={() => (canvasRef.current?.dispatchEvent(new PointerEvent("pointerdown")))} className="primary-button"><span>START FLIGHT</span><b>↗</b></button><div className="hint"><span>SPACE</span> or tap anywhere</div></div>}
+    {mode === "ready" && <div className="screen-card intro-card"><div className="intro-mascot-wrap"><img className="intro-mascot" src={DRAGON} alt="The Flappy Dragon mascot flapping its wings" /><span className="mascot-caption">YOUR PILOT</span></div><div className="eyebrow">A tiny dragon. A very big sky.</div><h1>Keep your<br/><em>wings clear.</em></h1><p>Tap, click, or press Space to rise through the ruins. How far can you fly?</p><button onClick={() => (canvasRef.current?.dispatchEvent(new PointerEvent("pointerdown")))} className="primary-button"><span>START FLIGHT</span><b>↗</b></button><div className="hint"><span>SPACE</span> or tap anywhere</div></div>}
     {mode === "playing" && <div className="flight-tip">TAP TO FLAP <span>·</span> STAY LIGHT</div>}
     {mode === "over" && <div className="screen-card over-card"><div className="eyebrow">Flight log complete</div><h2>Clouds caught you.</h2><div className="result-line"><div><small>SCORE</small><strong>{score}</strong></div><div><small>BEST</small><strong>{best}</strong></div></div>{!saved ? <><label className="name-label" htmlFor="pilot-name">Save this flight</label><div className="name-row"><input id="pilot-name" maxLength={12} placeholder="YOUR NAME" value={name} onChange={e => setName(e.target.value)} /><button onClick={submit} className="small-button">SAVE</button></div></> : <div className="saved-note">✦ Flight logged to the hall of fame.</div>}<div className="over-actions"><button onClick={restart} className="primary-button"><span>FLY AGAIN</span><b>↗</b></button><button onClick={() => setShowBoard(true)} className="quiet-button">VIEW LEADERBOARD <span>→</span></button></div></div>}
     <div className="bottom-rail"><button className="rail-button" onClick={() => setShowBoard(true)}>✦ <span>FLIGHT LOG</span></button><span className="rail-copy">MADE FOR REPLAY · DRAGONS WELCOME</span><div className="rail-actions"><button className="rail-button sound">◒ <span>SOUND ON</span></button><button className="rail-button" onClick={() => setSettingsOpen(true)} aria-label="Open settings">⚙ <span>SETTINGS</span></button></div></div>
